@@ -20,9 +20,10 @@ RUN mkdir -p /app/templates/assets/bootstrap/css /app/templates/assets/bootstrap
  && cp /tmp/bootstrap/bootstrap-${BOOTSTRAP_VERSION}-dist/css/bootstrap.min.css /app/templates/assets/bootstrap/css/ \
  && cp /tmp/bootstrap/bootstrap-${BOOTSTRAP_VERSION}-dist/js/bootstrap.bundle.min.js /app/templates/assets/bootstrap/js/ \
  && curl -sSL "https://use.fontawesome.com/releases/v${FONTAWESOME_VERSION}/fontawesome-free-${FONTAWESOME_VERSION}-web.zip" -o /tmp/fontawesome.zip \
- && unzip /tmp/fontawesome.zip fontawesome-free-${FONTAWESOME_VERSION}-web/css/brands.min.css fontawesome-free-${FONTAWESOME_VERSION}-web/css/fontawesome.min.css fontawesome-free-${FONTAWESOME_VERSION}-web/css/solid.min.css "fontawesome-free-${FONTAWESOME_VERSION}-web/webfonts/*" -d /tmp/fontawesome \
+ && unzip /tmp/fontawesome.zip fontawesome-free-${FONTAWESOME_VERSION}-web/css/brands.min.css fontawesome-free-${FONTAWESOME_VERSION}-web/css/fontawesome.min.css fontawesome-free-${FONTAWESOME_VERSION}-web/css/regular.min.css fontawesome-free-${FONTAWESOME_VERSION}-web/css/solid.min.css "fontawesome-free-${FONTAWESOME_VERSION}-web/webfonts/*" -d /tmp/fontawesome \
  && cp /tmp/fontawesome/fontawesome-free-${FONTAWESOME_VERSION}-web/css/brands.min.css /app/templates/assets/fontawesome/css/ \
  && cp /tmp/fontawesome/fontawesome-free-${FONTAWESOME_VERSION}-web/css/fontawesome.min.css /app/templates/assets/fontawesome/css/ \
+ && cp /tmp/fontawesome/fontawesome-free-${FONTAWESOME_VERSION}-web/css/regular.min.css /app/templates/assets/fontawesome/css/ \
  && cp /tmp/fontawesome/fontawesome-free-${FONTAWESOME_VERSION}-web/css/solid.min.css /app/templates/assets/fontawesome/css/ \
  && cp /tmp/fontawesome/fontawesome-free-${FONTAWESOME_VERSION}-web/webfonts/* /app/templates/assets/fontawesome/webfonts/ \
  && rm -rf /tmp/bootstrap /tmp/bootstrap.zip /tmp/fontawesome /tmp/fontawesome.zip

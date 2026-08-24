@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/bootstrap/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/fontawesome/css/fontawesome.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/fontawesome/css/brands.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/fontawesome/css/regular.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/fontawesome/css/solid.min.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="{{ url_for('static', filename='assets/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
@@ -61,6 +62,12 @@
                   <span>Add</span>
                </a>
             </li>
+            <li class="nav-item pe-3">
+              <a class="nav-link text-light rounded-pill bg-primary px-2" aria-current="page" href="{{ url_for('bulk_add') }}" aria-label="BulkAdd">
+                  <i class="fa-solid fa-file-import"></i>
+                  <span>Bulk Add</span>
+               </a>
+            </li>
             {% endif -%}
             <li class="nav-item pe-3">
               <a class="nav-link text-light rounded-pill bg-secondary px-2" aria-current="page" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal" aria-label="About">
@@ -88,18 +95,30 @@
           </ul>
         </div>
         <div class="search-container">
+          <div class="btn-group me-1">
+            <button class="btn dropdown-toggle border border-secondary" type="button" id="groupFilterDropdownButton" data-bs-toggle="dropdown" aria-expanded="false" title="Filter by Group">
+              <i class="fa-solid fa-layer-group"></i> <span id="selectedGroupFilterText">All Groups</span>
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="groupFilterDropdownButton" id="groupFilterMenu">
+              <li><a class="dropdown-item active" href="#" onclick="filterByGroup('all', event)">All Groups</a></li>
+              {% for group in groups %}
+              <li><a class="dropdown-item" href="#" onclick="filterByGroup('{{ group }}', event)">{{ group }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
           <div class="btn-group">
             <button class="btn dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="fa-solid fa-arrow-up-short-wide"></i>
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
               <li><a class="dropdown-item" href="#" onclick="sortComputers('name')">Sort by Name</a></li>
+              <li><a class="dropdown-item" href="#" onclick="sortComputers('group')">Sort by Group</a></li>
               <li><a class="dropdown-item" href="#" onclick="sortComputers('ip')">Sort by IP</a></li>
               <li><a class="dropdown-item" href="#" onclick="sortComputers('mac')">Sort by MAC</a></li>
             </ul>
           </div>
           <div class="btn-group">
-            <input type="text" placeholder="Search Name, MAC or IP" class="search-input border border-secondary" value="">
+            <input type="text" placeholder="Search Name, Group, MAC or IP" class="search-input border border-secondary" value="">
             <button type="button" class="btn btn-secondary" onclick="clearSearchInput()" title="Clear">
               <i class="fa-solid fa-x"></i>
            </button>
@@ -129,7 +148,7 @@
     <div class="container-fluid">
       <div class="row row-sortable justify-content-center">
         {% for computer in computers %}
-        <div class="col-lg-3 col-md-6 d-flex computer-card">
+        <div class="col-lg-3 col-md-6 d-flex computer-card" data-group="{{ computer.group_name or '' }}">
           <div class="card mt-2 flex-fill d-flex flex-column">
             <div class="card-body d-flex flex-column flex-grow-1">
               <div class="title-sortable row justify-content-start p-1">
@@ -149,12 +168,16 @@
                 <div class="info-sortable">
                   <div class="sortable">IP    : {{ computer.ip_address }}</div>
                   <div class="sortable">MAC   : {{ computer.mac_address }}</div>
+                  {% if computer.group_name -%}
+                  <div class="sortable">Group : {{ computer.group_name }}</div>
+                  {% endif -%}
                   {% if computer.test_type in ['icmp', 'arp'] -%}
                   <div>Check : {{ computer.test_type | upper }}
                   {% else -%}
                   <div>Check : TCP {{ computer.test_type }}
                   {% endif -%}
                   <span class="status-indicator asleep" data-ip-address="{{ computer.ip_address }}" data-test-type="{{ computer.test_type }}"></span></div>
+                  <div>Adapter : {{ computer.interface }}</div>
                   {% if computer.cron_wol_schedule is defined -%}
                   <div class="mt-1 text-light rounded-pill bg-success px-2">
                     <i class="fa-solid fa-arrow-up"></i>
@@ -175,7 +198,7 @@
               <button type="button" class="btn btn-primary btn-circle btn-lg" title="Configure Cron" data-bs-toggle="modal" data-bs-target="#cronSettingsModal" onclick="loadCronSettings('{{ computer.name }}', '{{ computer.cron_wol_schedule }}', '{{ computer.cron_sol_schedule }}', '{{ computer.mac_address }}')">
                 <i class="fa-regular fa-clock"></i>
               </button>
-              <button type="button" class="btn btn-primary btn-circle btn-lg m-2" title="Edit computer" data-bs-toggle="modal" data-bs-target="#editComputer" data-name="{{ computer.name }}" data-mac-address="{{ computer.mac_address }}" data-ip-address="{{ computer.ip_address }}" data-test-type="{{ computer.test_type }}">
+              <button type="button" class="btn btn-primary btn-circle btn-lg m-2" title="Edit computer" data-bs-toggle="modal" data-bs-target="#editComputer" data-name="{{ computer.name }}" data-mac-address="{{ computer.mac_address }}" data-ip-address="{{ computer.ip_address }}" data-test-type="{{ computer.test_type }}" data-interface="{{ computer.interface }}" data-group-name="{{ computer.group_name or '' }}">
                 <i class="fa-regular fa-pen-to-square"></i>
               </button>
               <button type="button" class="btn btn-danger btn-circle btn-lg" title="Delete computer" data-bs-toggle="modal" data-bs-target="#staticDelete" onclick="setDeleteForm('{{ url_for('delete_computer') }}', 'mac_address', '{{ computer.mac_address }}', 'Computer {{ computer.name }}')">
@@ -216,6 +239,19 @@
               <label for="test_type">Status Check:</label>
               <input type="text" class="form-control" name="test_type" id="test_type" placeholder="icmp, arp or port number" required>
             </div>
+            <div class="form-group">
+              <label for="interface">Ethernet Adapter:</label>
+              <input type="text" class="form-control" name="interface" id="interface" placeholder="eth0" required>
+            </div>
+            <div class="form-group">
+              <label for="group_name">Group (optional):</label>
+              <input type="text" class="form-control" name="group_name" id="group_name" list="groupSuggestions" placeholder="e.g. Living Room, Office">
+              <datalist id="groupSuggestions">
+                {% for group in groups %}
+                <option value="{{ group }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
           </div>
           <div class="modal-footer">
                 <button class="btn btn-primary" id="arpScanButton" data-bs-target="#arpScan" data-bs-toggle="modal" data-bs-dismiss="modal">Scan Network</button>
@@ -251,6 +287,14 @@
               <div class="form-group">
                 <label for="test_type">Status Check:</label>
                 <input type="text" class="form-control" name="test_type" id="edit_test_type" placeholder="icmp or port number" required>
+              </div>
+              <div class="form-group">
+                <label for="interface">Ethernet Adapter:</label>
+                <input type="text" class="form-control" name="interface" id="edit_interface" placeholder="eth0" required>
+              </div>
+              <div class="form-group">
+                <label for="edit_group_name">Group (optional):</label>
+                <input type="text" class="form-control" name="group_name" id="edit_group_name" list="groupSuggestions" placeholder="e.g. Living Room, Office">
               </div>
           </div>
           <div class="modal-footer">

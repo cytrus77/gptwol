@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bulk add computer entries to GPTWOL network tool.">
+    <title>Bulk Add Computers - GPTWOL</title>
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/gptwol.png') }}"/>
+    <link rel="icon" href="{{ url_for('static', filename='images/gptwol.png') }}" type="image/png"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/bootstrap/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/fontawesome/css/fontawesome.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/fontawesome/css/brands.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/fontawesome/css/regular.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/fontawesome/css/solid.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='assets/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-md sticky-top" style="background-color: rgba(0, 0, 0, 0.05);">
+      <div class="container-lg">
+        <a class="navbar-brand" href="/">
+          <img src="{{ url_for('static', filename='images/gptwol.png') }}" width="40" height="40" alt="Logo">
+          <span class="ms-2 fw-bold text-light">GPTWOL</span>
+        </a>
+        <div class="d-flex align-items-center">
+          <a class="btn btn-outline-secondary rounded-pill me-3 text-light" href="{{ url_for('wol_form') }}">
+            <i class="fa-solid fa-arrow-left"></i> Back to Computers
+          </a>
+          <div class="align-items-center d-flex px-2 pt-2 btn rounded-pill border border-secondary" id="darkModeBtn">
+            <i class="fa-solid fa-sun"></i>
+            <div class="ms-2 form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="darkModeSwitch" checked aria-label="Switch between light and dark mode">
+            </div>
+            <i class="fa-solid fa-moon"></i>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container my-4">
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+          <div class="card shadow-sm border border-secondary">
+            <div class="card-header bg-dark text-white d-flex align-items-center">
+              <i class="fa-solid fa-file-import fa-lg me-2"></i>
+              <h5 class="mb-0">Bulk Add Computers from Text</h5>
+            </div>
+            <div class="card-body">
+              <p class="text-secondary">
+                Enter multiple computer entries below, with each entry on a new line and parameters separated by <code>;</code> semicolon.
+              </p>
+
+              <div class="alert alert-dark border border-secondary mb-3">
+                <h6 class="alert-heading fw-bold"><i class="fa-solid fa-info-circle"></i> Line Format:</h6>
+                <code>Name;MAC address;IP address;Status Check;Ethernet Adapter;Group</code>
+                <hr class="my-2">
+                <small class="text-muted d-block mb-1"><strong>Defaults:</strong> Status Check = <code>icmp</code>, Adapter = <code>eth0</code>, Group = <em>(empty)</em>.</small>
+                <small class="text-muted d-block mb-1"><strong>Example:</strong></small>
+                <pre class="mb-0 text-light bg-dark p-2 rounded" style="font-size: 13px;">PC-Office-1;00:11:22:33:44:55;192.168.1.10;icmp;eth0;Office
+PC-Office-2;00:11:22:33:44:56;192.168.1.11;arp;eth0;Office
+PC-LivingRoom;00:11:22:33:44:57;192.168.1.20;80;wlan0;Living Room</pre>
+              </div>
+
+              <form method="POST" action="{{ url_for('bulk_add') }}">
+                <div class="form-group mb-3">
+                  <label for="bulk_text" class="form-label fw-bold">Entries Text:</label>
+                  <textarea class="form-control font-monospace" name="bulk_text" id="bulk_text" rows="10" placeholder="PC-Office-1;00:11:22:33:44:55;192.168.1.10;icmp;eth0;Office" required></textarea>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                  <a href="{{ url_for('wol_form') }}" class="btn btn-secondary">Cancel</a>
+                  <button type="submit" class="btn btn-success px-4">
+                    <i class="fa-solid fa-plus-circle"></i> Add Entries
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+  </body>
+</html>

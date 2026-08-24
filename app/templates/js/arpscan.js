@@ -40,6 +40,10 @@ document.getElementById('arpScanButton').addEventListener('click', function() {
             document.getElementById('ip_address').value = device.ip;
             document.getElementById('mac_address').value = device.mac;
             document.getElementById('test_type').value = 'arp';
+            const interfaceInput = document.getElementById('interface');
+            if (interfaceInput && !interfaceInput.value) {
+              interfaceInput.value = 'eth0';
+            }
           };
 
           resultsList.appendChild(listItem);

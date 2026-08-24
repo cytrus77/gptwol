@@ -53,30 +53,40 @@
             <li class="nav-item pe-3">
               <a class="nav-link text-light rounded-pill bg-success px-2" aria-current="page" href="#" data-bs-toggle="modal" data-bs-target="#addComputer" aria-label="AddComputer">
                   <i class="fa-solid fa-circle-plus"></i>
-                  <span>Add</span>
+                  <span>{{ _('Add') }}</span>
                </a>
             </li>
             <li class="nav-item pe-3">
               <a class="nav-link text-light rounded-pill bg-primary px-2" aria-current="page" href="{{ url_for('bulk_add') }}" aria-label="BulkAdd">
                   <i class="fa-solid fa-file-import"></i>
-                  <span>Bulk Add</span>
+                  <span>{{ _('Bulk Add') }}</span>
                </a>
             </li>
             {% endif -%}
             <li class="nav-item pe-3">
               <a class="nav-link text-light rounded-pill bg-secondary px-2" aria-current="page" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal" aria-label="About">
                 <i class="fa-solid fa-info-circle"></i>
-                <span>About</span>
+                <span>{{ _('About') }}</span>
               </a>
             </li>
             {% if os.environ.get('ENABLE_LOGIN') == 'true' or os.environ.get('OIDC_ENABLED') == 'true' -%}
             <li class="nav-item pe-3">
               <a class="nav-link text-light rounded-pill bg-danger px-2" aria-current="page" href="{{ url_for('logout') }}">
                 <i class="fa-solid fa-sign-out"></i>
-                <span>Logout</span>
+                <span>{{ _('Logout') }}</span>
               </a>
             </li>
-            {% endif -%}            
+            {% endif -%}
+            <li class="nav-item pe-3 dropdown">
+              <button class="btn dropdown-toggle rounded-pill lang-btn px-2" type="button" id="langDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa-solid fa-globe"></i>
+                <span>{{ 'PL' if current_lang == 'pl' else 'EN' }}</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">
+                <li><a class="dropdown-item {{ 'active' if current_lang == 'en' }}" href="{{ url_for('set_lang', lang_code='en') }}">🇬🇧 English</a></li>
+                <li><a class="dropdown-item {{ 'active' if current_lang == 'pl' }}" href="{{ url_for('set_lang', lang_code='pl') }}">🇵🇱 Polski</a></li>
+              </ul>
+            </li>
             <li class="nav-item pe-3">
               <div class="align-items-center d-flex px-2 pt-2 btn rounded-pill border border-secondary" id="darkModeBtn">
                 <i class="fa-solid fa-sun"></i>
@@ -90,11 +100,11 @@
         </div>
         <div class="search-container">
           <div class="btn-group me-1">
-            <button class="btn dropdown-toggle border border-secondary" type="button" id="groupFilterDropdownButton" data-bs-toggle="dropdown" aria-expanded="false" title="Filter by Group">
-              <i class="fa-solid fa-layer-group"></i> <span id="selectedGroupFilterText">All Groups</span>
+            <button class="btn dropdown-toggle border border-secondary" type="button" id="groupFilterDropdownButton" data-bs-toggle="dropdown" aria-expanded="false" title="{{ _('Filter by Group') }}">
+              <i class="fa-solid fa-layer-group"></i> <span id="selectedGroupFilterText">{{ _('All Groups') }}</span>
             </button>
             <ul class="dropdown-menu" aria-labelledby="groupFilterDropdownButton" id="groupFilterMenu">
-              <li><a class="dropdown-item active" href="#" onclick="filterByGroup('all', event)">All Groups</a></li>
+              <li><a class="dropdown-item active" href="#" onclick="filterByGroup('all', event)">{{ _('All Groups') }}</a></li>
               {% for group in groups %}
               <li><a class="dropdown-item" href="#" onclick="filterByGroup('{{ group }}', event)">{{ group }}</a></li>
               {% endfor %}
@@ -105,14 +115,14 @@
               <i class="fa-solid fa-arrow-up-short-wide"></i>
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-              <li><a class="dropdown-item" href="#" onclick="sortComputers('name')">Sort by Name</a></li>
-              <li><a class="dropdown-item" href="#" onclick="sortComputers('group')">Sort by Group</a></li>
-              <li><a class="dropdown-item" href="#" onclick="sortComputers('ip')">Sort by IP</a></li>
-              <li><a class="dropdown-item" href="#" onclick="sortComputers('mac')">Sort by MAC</a></li>
+              <li><a class="dropdown-item" href="#" onclick="sortComputers('name')">{{ _('Sort by Name') }}</a></li>
+              <li><a class="dropdown-item" href="#" onclick="sortComputers('group')">{{ _('Sort by Group') }}</a></li>
+              <li><a class="dropdown-item" href="#" onclick="sortComputers('ip')">{{ _('Sort by IP') }}</a></li>
+              <li><a class="dropdown-item" href="#" onclick="sortComputers('mac')">{{ _('Sort by MAC') }}</a></li>
             </ul>
           </div>
           <div class="btn-group">
-            <input type="text" placeholder="Search Name, Group, MAC or IP" class="search-input border border-secondary" value="">
+            <input type="text" placeholder="{{ _('Search Name, Group, MAC or IP') }}" class="search-input border border-secondary" value="">
             <button type="button" class="btn btn-secondary" onclick="clearSearchInput()" title="Clear">
               <i class="fa-solid fa-x"></i>
            </button>
@@ -369,7 +379,7 @@
                   <span>GPTWOL</span>
                 </a>
               </p>
-              <p><strong>Version:</strong> 8.0.0</p>
+              <p><strong>Version:</strong> 8.1.0</p>
               <p><strong>License:</strong> MIT</p>
             </div>
           </div>

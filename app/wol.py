@@ -187,6 +187,115 @@ def logout():
   session.clear()
   return redirect(url_for('login'))
 
+DEFAULT_LANG = os.environ.get('DEFAULT_LANG', 'en').lower()
+
+TRANSLATIONS = {
+    'pl': {
+        # General & Nav
+        'GPTWOL': 'GPTWOL',
+        'All Groups': 'Wszystkie grupy',
+        'Filter by Group': 'Filtruj wg grupy',
+        'Sort by Name': 'Sortuj wg nazwy',
+        'Sort by Group': 'Sortuj wg grupy',
+        'Sort by IP': 'Sortuj wg IP',
+        'Sort by MAC': 'Sortuj wg MAC',
+        'Search Name, Group, MAC or IP': 'Szukaj nazwy, grupy, MAC lub IP',
+        'Add': 'Dodaj',
+        'Bulk Add': 'Dodanie masowe',
+        'About': 'O programie',
+        'Logout': 'Wyloguj',
+        'Login': 'Zaloguj',
+        'Back to Computers': 'Powrót do komputerów',
+        'Language': 'Język',
+        'English': 'English',
+        'Polish': 'Polski',
+
+        # Computer Card
+        'IP': 'IP',
+        'MAC': 'MAC',
+        'Group': 'Grupa',
+        'Check': 'Test',
+        'Adapter': 'Karta sieciowa',
+        'Configure Cron': 'Konfiguruj harmonogram',
+        'Edit computer': 'Edytuj komputer',
+        'Delete computer': 'Usuń komputer',
+        'Wake': 'Uruchom',
+        'Sleep': 'Uśpij',
+
+        # Modals
+        'Add Computer': 'Dodaj komputer',
+        'Edit Computer': 'Edytuj komputer',
+        'Delete Computer': 'Usuń komputer',
+        'Are you sure you want to delete': 'Czy na pewno chcesz usunąć',
+        'Cron Settings': 'Ustawienia harmonogramu',
+        'Scan Network': 'Skanuj sieć',
+        'Cancel': 'Anuluj',
+        'Save': 'Zapisz',
+        'Close': 'Zamknij',
+        'Name:': 'Nazwa:',
+        'MAC address:': 'Adres MAC:',
+        'IP address:': 'Adres IP:',
+        'Status Check:': 'Sprawdzanie stanu:',
+        'Ethernet Adapter:': 'Karta sieciowa:',
+        'Group (optional):': 'Grupa (opcjonalnie):',
+
+        # Cron Modal
+        'Cron Schedule (WOL / SOL)': 'Harmonogram Cron (WOL / SOL)',
+        'Wake On Lan Cron': 'Cron uruchamiania (WOL)',
+        'Sleep On Lan Cron': 'Cron wyłączania (SOL)',
+        'Set Cron': 'Ustaw Cron',
+        'Delete Cron': 'Usuń Cron',
+
+        # Bulk Add Page
+        'Bulk Add Computers from Text': 'Masowe dodawanie komputerów z tekstu',
+        'Enter multiple computer entries below...': 'Wprowadź poniżej wiele wpisów komputerów, każdy w nowej linii, z parametrami rozdzielonymi średnikiem ;',
+        'Line Format:': 'Format linii:',
+        'Defaults:': 'Domyślne wartości:',
+        'Example:': 'Przykład:',
+        'Entries Text:': 'Tekst wpisów:',
+        'Add Entries': 'Dodaj wpisy',
+
+        # Messages & Errors
+        'SSO LOGIN ERROR': 'BŁĄD LOGOWANIA SSO',
+        'SSO CALLBACK ERROR': 'BŁĄD CALLBACK SSO',
+        'Connected as:': 'Połączono jako:',
+        'Invalid Credentials': 'Nieprawidłowe dane logowania',
+        'Add Computer Error': 'Błąd dodawania komputera',
+        'Edit Computer Error': 'Błąd edycji komputera',
+        'Edit Computer Info': 'Informacja o edycji komputera',
+        'No change was made.': 'Nie dokonano żadnych zmian.',
+        'Bulk Add Results': 'Wyniki masowego dodawania',
+        'Invalid cron expression!': 'Nieprawidłowe wyrażenie cron!',
+        'Add Cron Error': 'Błąd dodawania cron',
+        'Shutdown': 'Wyłączenie',
+        'Wakeup': 'Uruchomienie',
+        'Wake On Lan Mode: L2 Packet': 'Tryb Wake On Lan: Pakiet L2',
+        'Wake On Lan Mode: L4 Packet': 'Tryb Wake On Lan: Pakiet L4',
+        'Sleep On Lan Magic Packet Sent to': 'Wysłano magiczny pakiet Sleep On Lan do',
+        'Wake On Lan Magic Packet Sent to': 'Wysłano magiczny pakiet Wake On Lan do',
+        'No new devices found.': 'Nie znaleziono nowych urządzeń.'
+    }
+}
+
+def get_current_lang():
+  return session.get('lang', DEFAULT_LANG)
+
+def gettext_helper(text):
+  lang = get_current_lang()
+  if lang in TRANSLATIONS and text in TRANSLATIONS[lang]:
+    return TRANSLATIONS[lang][text]
+  return text
+
+@app.context_processor
+def inject_i18n():
+  return dict(_=gettext_helper, current_lang=get_current_lang())
+
+@app.route('/set_lang/<lang_code>')
+def set_lang(lang_code):
+  if lang_code in ['en', 'pl']:
+    session['lang'] = lang_code
+  return redirect(request.referrer or url_for('wol_form'))
+
 from markupsafe import escape
 
 def generate_modal_html(messages, title):

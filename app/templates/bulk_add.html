@@ -24,9 +24,18 @@
           <span class="ms-2 fw-bold text-light">GPTWOL</span>
         </a>
         <div class="d-flex align-items-center">
-          <a class="btn btn-outline-secondary rounded-pill me-3 text-light" href="{{ url_for('wol_form') }}">
-            <i class="fa-solid fa-arrow-left"></i> Back to Computers
+          <a class="btn btn-outline-secondary rounded-pill me-2 text-light" href="{{ url_for('wol_form') }}">
+            <i class="fa-solid fa-arrow-left"></i> {{ _('Back to Computers') }}
           </a>
+          <div class="dropdown me-3">
+            <button class="btn dropdown-toggle rounded-pill lang-btn" type="button" id="langDropdownBulk" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fa-solid fa-globe"></i> {{ 'PL' if current_lang == 'pl' else 'EN' }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdownBulk">
+              <li><a class="dropdown-item {{ 'active' if current_lang == 'en' }}" href="{{ url_for('set_lang', lang_code='en') }}">🇬🇧 English</a></li>
+              <li><a class="dropdown-item {{ 'active' if current_lang == 'pl' }}" href="{{ url_for('set_lang', lang_code='pl') }}">🇵🇱 Polski</a></li>
+            </ul>
+          </div>
           <div class="align-items-center d-flex px-2 pt-2 btn rounded-pill border border-secondary" id="darkModeBtn">
             <i class="fa-solid fa-sun"></i>
             <div class="ms-2 form-check form-switch">
@@ -44,19 +53,19 @@
           <div class="card shadow-sm border border-secondary">
             <div class="card-header bg-dark text-white d-flex align-items-center">
               <i class="fa-solid fa-file-import fa-lg me-2"></i>
-              <h5 class="mb-0">Bulk Add Computers from Text</h5>
+              <h5 class="mb-0">{{ _('Bulk Add Computers from Text') }}</h5>
             </div>
             <div class="card-body">
               <p class="text-secondary">
-                Enter multiple computer entries below, with each entry on a new line and parameters separated by <code>;</code> semicolon.
+                {{ _('Enter multiple computer entries below...') }}
               </p>
 
               <div class="alert alert-dark border border-secondary mb-3">
-                <h6 class="alert-heading fw-bold"><i class="fa-solid fa-info-circle"></i> Line Format:</h6>
+                <h6 class="alert-heading fw-bold"><i class="fa-solid fa-info-circle"></i> {{ _('Line Format:') }}</h6>
                 <code>Name;MAC address;IP address;Status Check;Ethernet Adapter;Group</code>
                 <hr class="my-2">
-                <small class="text-muted d-block mb-1"><strong>Defaults:</strong> Status Check = <code>icmp</code>, Adapter = <code>eth0</code>, Group = <em>(empty)</em>.</small>
-                <small class="text-muted d-block mb-1"><strong>Example:</strong></small>
+                <small class="text-muted d-block mb-1"><strong>{{ _('Defaults:') }}</strong> Status Check = <code>icmp</code>, Adapter = <code>eth0</code>, Group = <em>(empty)</em>.</small>
+                <small class="text-muted d-block mb-1"><strong>{{ _('Example:') }}</strong></small>
                 <pre class="mb-0 text-light bg-dark p-2 rounded" style="font-size: 13px;">PC-Office-1;00:11:22:33:44:55;192.168.1.10;icmp;eth0;Office
 PC-Office-2;00:11:22:33:44:56;192.168.1.11;arp;eth0;Office
 PC-LivingRoom;00:11:22:33:44:57;192.168.1.20;80;wlan0;Living Room</pre>
@@ -64,13 +73,13 @@ PC-LivingRoom;00:11:22:33:44:57;192.168.1.20;80;wlan0;Living Room</pre>
 
               <form method="POST" action="{{ url_for('bulk_add') }}">
                 <div class="form-group mb-3">
-                  <label for="bulk_text" class="form-label fw-bold">Entries Text:</label>
+                  <label for="bulk_text" class="form-label fw-bold">{{ _('Entries Text:') }}</label>
                   <textarea class="form-control font-monospace" name="bulk_text" id="bulk_text" rows="10" placeholder="PC-Office-1;00:11:22:33:44:55;192.168.1.10;icmp;eth0;Office" required></textarea>
                 </div>
                 <div class="d-flex justify-content-end gap-2">
-                  <a href="{{ url_for('wol_form') }}" class="btn btn-secondary">Cancel</a>
+                  <a href="{{ url_for('wol_form') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
                   <button type="submit" class="btn btn-success px-4">
-                    <i class="fa-solid fa-plus-circle"></i> Add Entries
+                    <i class="fa-solid fa-plus-circle"></i> {{ _('Add Entries') }}
                   </button>
                 </div>
               </form>

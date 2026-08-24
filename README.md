@@ -128,6 +128,7 @@ services:
       #- ARP_INTERFACE=eth0 #Uncomment this line to set an arp interface manually for scan and test; default is not set
       #- ARP_TIMEOUT=300 #Uncomment to change the time to wait for a arp answer (in ms); default value is 300 milliseconds
       #- TCP_TIMEOUT=1 #Uncomment to change the time to wait for a tcp check (in s);  default value 1 second
+      #- DEFAULT_LANG=en # Set default language ('en' or 'pl'); default is en
       #- ENABLE_L2_WOL_PACKET=false # Enable L2 WOL packet instead of L4, default is false
       #- L2_INTERFACE=eth0 # Set the default interface for L2 WOL (set this only if you set ENABLE_L2_WOL_PACKET to true), default is eth0
     volumes:
@@ -239,7 +240,7 @@ docker run -d \
 
 :heavy_check_mark: OIDC sign in (added in 7.1.0)
 
-:heavy_check_mark: Select ethernet adapter per computer, group filtering, and bulk text import (added in 8.0.0)
+:heavy_check_mark: Select ethernet adapter per computer, group filtering, bulk text import, and Polish language support (added in 8.1.0)
 
 ## Questions
 

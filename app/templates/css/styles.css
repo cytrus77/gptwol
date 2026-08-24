@@ -62,3 +62,34 @@
   line-height: 1.33;
   border-radius: 25px;
 }
+
+/* Custom Language Switcher Styling for Light & Dark Mode */
+.lang-btn {
+  color: var(--bs-body-color, #212529) !important;
+  background-color: var(--bs-secondary-bg, #e9ecef);
+  border: 1px solid var(--bs-border-color, #6c757d) !important;
+  font-weight: 500;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.lang-btn:hover,
+.lang-btn:focus,
+.lang-btn.show {
+  color: var(--bs-body-color, #212529) !important;
+  background-color: var(--bs-tertiary-bg, #ced4da);
+  border-color: var(--bs-border-color-translucent, #495057) !important;
+}
+
+[data-bs-theme="light"] .lang-btn {
+  color: #212529 !important;
+  background-color: #d6d8db;
+  border-color: #adb5bd !important;
+}
+
+[data-bs-theme="light"] .lang-btn:hover,
+[data-bs-theme="light"] .lang-btn:focus,
+[data-bs-theme="light"] .lang-btn.show {
+  color: #111111 !important;
+  background-color: #c4c8cb;
+  border-color: #6c757d !important;
+}

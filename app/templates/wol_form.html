@@ -18,21 +18,15 @@
     <script>
       const arp_scan_url = "{{ url_for('arp_scan') }}";
       const check_status_url = "{{ url_for('check_status') }}";
-      const add_wol_cron_url = "{{ url_for('add_wol_cron') }}"
-      const add_sol_cron_url = "{{ url_for('add_sol_cron') }}"
-      const delete_wol_cron_url = "{{ url_for('delete_wol_cron') }}"
-      const delete_sol_cron_url = "{{ url_for('delete_sol_cron') }}"
+      const check_all_statuses_url = "{{ url_for('check_all_statuses') }}";
+      const add_wol_cron_url = "{{ url_for('add_wol_cron') }}";
+      const add_sol_cron_url = "{{ url_for('add_sol_cron') }}";
+      const delete_wol_cron_url = "{{ url_for('delete_wol_cron') }}";
+      const delete_sol_cron_url = "{{ url_for('delete_sol_cron') }}";
 
       {% if os.environ.get('ENABLE_REFRESH') != 'false' -%}
         setInterval(() => {
-          // Update the status of all computers
-          for (let element of document.getElementsByClassName('status-indicator')) {
-            const ip_address = element.getAttribute('data-ip-address');
-            const test_type = element.getAttribute('data-test-type');
-            // Find the corresponding button element
-            const buttonElement = element.closest('.card').querySelector('.status-power');
-            updateStatus(ip_address, test_type, element, buttonElement);
-          }
+          updateAllStatuses();
         {% if os.environ.get('REFRESH_INTERVAL') -%}
         }, {{ os.environ.get('REFRESH_INTERVAL') | int * 1000 }});
         {% else -%}
@@ -229,7 +223,7 @@
             </div>
             <div class="form-group">
               <label for="mac_address">MAC address:</label>
-              <input type="text" class="form-control" name="mac_address" id="mac_address" placeholder="00:11:22:33:44:55" required>
+              <input type="text" class="form-control" name="mac_address" id="mac_address" placeholder="00:11:22:33:44:55" pattern="^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$" title="Format: 00:11:22:33:44:55" required>
             </div>
             <div class="form-group">
               <label for="ip_address">IP address:</label>

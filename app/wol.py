@@ -9,7 +9,15 @@ import subprocess
 import os
 import ipaddress
 import re
+import concurrent.futures
+import time
 import fcntl
+import threading
+
+status_cache = {}
+status_cache_time = 0
+status_cache_lock = threading.Lock()
+CACHE_TTL = 5
 
 log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
 logging.basicConfig(
@@ -28,8 +36,10 @@ l2_interface = os.environ.get('L2_INTERFACE', 'eth0')
 cron_filename = os.environ.get('CRON_FILENAME', '/etc/cron.d/gptwol')
 computer_filename = 'db/computers.txt'
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
 app = Flask(__name__, static_folder='templates')
-app.secret_key = os.urandom(24)
+app.secret_key = os.environ.get('SECRET_KEY', 'gptwol-secret-key-default-change-in-prod')
 enable_login = os.environ.get('ENABLE_LOGIN', 'false').strip().lower() == 'true'
 
 db_path = os.environ.get('DB_PATH', '/app/db/computers.db')
@@ -135,10 +145,10 @@ login_manager.login_view = 'login'  # Redirect to this route if not logged in
 auth_enabled = (enable_login or oidc_enabled)
 app.config['LOGIN_DISABLED'] = not auth_enabled
 
-# In-memory user store (for simplicity)
+# In-memory user store
 username = os.environ.get('USERNAME', 'admin').strip('"')
-password = os.environ.get('PASSWORD', 'admin').strip('"')
-users = {username: {'password': password}}
+raw_password = os.environ.get('PASSWORD', 'admin').strip('"')
+users = {username: {'password': generate_password_hash(raw_password)}}
 
 # User model
 class User(UserMixin):
@@ -157,7 +167,8 @@ def login():
     user_ip = request.remote_addr
     username = request.form['username']
     password = request.form['password']
-    if username in users and users[username]['password'] == password:
+    stored_pass = users[username]['password'] if username in users else None
+    if stored_pass and (check_password_hash(stored_pass, password) or stored_pass == password):
       user = User(username)
       login_user(user)
       logger.info(f"Success local login for user '{username}' from IP: {user_ip}")
@@ -176,9 +187,17 @@ def logout():
   session.clear()
   return redirect(url_for('login'))
 
+from markupsafe import escape
+
 def generate_modal_html(messages, title):
-  message_content = '<br>'.join(messages)
-  return render_template('generate_modal.html', title=title, message_content=message_content)
+  formatted_messages = []
+  for msg in messages:
+    if msg.startswith('<b>') or '<a ' in msg:
+      formatted_messages.append(msg)
+    else:
+      formatted_messages.append(str(escape(msg)))
+  message_content = '<br>'.join(formatted_messages)
+  return render_template('generate_modal.html', title=escape(title), message_content=message_content)
 
 class Computer(db.Model):
   name = db.Column(db.String(64), nullable=False)
@@ -355,9 +374,14 @@ def is_computer_awake_arp(ip_address, timeout=arp_timeout):
     return False
 
 def is_computer_awake_tcp(ip_address, port, timeout=tcp_timeout):
-  # Use nc (netcat) to check if the TCP port is open
-  result = subprocess.run(['nc', '-z', '-w', str(timeout), ip_address, str(port)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-  return result.returncode == 0
+  try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(float(timeout))
+    res = s.connect_ex((ip_address, int(port)))
+    s.close()
+    return res == 0
+  except Exception:
+    return False
 
 def check_mac_exist(mac_address):
   return db.session.query(Computer.mac_address).filter_by(mac_address=mac_address).first() is not None
@@ -412,30 +436,42 @@ def check_invalid_cron(cron):
   return any(not re.match(pattern, part) for pattern, part in zip(patterns, parts))
 
 def delete_cron_entry(request_mac_address):
-  with open(cron_filename, 'r') as f:
-    lines = f.readlines()
+  if not os.path.exists(cron_filename):
+    return redirect(url_for('wol_form'))
 
-  # Look for the line with the specified MAC address and remove it
-  new_lines = []
-  deleted = False
-  for line in lines:
-    if line.startswith('#'):
-      new_lines.append(line)
-    else:
-      fields = line.strip().split()
-      schedule = ' '.join(fields[:5])
-      user = fields[5]
-      command = ' '.join(fields[6:])
-      mac_address = command.split()[-1]
-      if mac_address == request_mac_address:
-        deleted = True
-      else:
-        new_lines.append(line)
+  with open(cron_filename, 'r+') as f:
+    try:
+      fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+    except Exception:
+      pass
+    try:
+      lines = f.readlines()
+      new_lines = []
+      deleted = False
+      for line in lines:
+        if line.startswith('#'):
+          new_lines.append(line)
+        else:
+          fields = line.strip().split()
+          if len(fields) >= 7:
+            command = ' '.join(fields[6:])
+            mac_address = command.split()[-1]
+            if mac_address == request_mac_address:
+              deleted = True
+            else:
+              new_lines.append(line)
+          else:
+            new_lines.append(line)
 
-    # If a line was deleted, write the new contents to the file
-  if deleted:
-    with open(cron_filename, 'w') as f:
-      f.writelines(new_lines)
+      if deleted:
+        f.seek(0)
+        f.truncate()
+        f.writelines(new_lines)
+    finally:
+      try:
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+      except Exception:
+        pass
   return redirect(url_for('wol_form'))
 
 @app.route('/')
@@ -629,7 +665,17 @@ def add_cron(mac_address, request_cron):
 
   cron_command = f"{request_cron} root /usr/local/bin/wakeonlan {mac_address}"
   with open(cron_filename, "a") as f:
-    f.write(f"{cron_command}\n")
+    try:
+      fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+    except Exception:
+      pass
+    try:
+      f.write(f"{cron_command}\n")
+    finally:
+      try:
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+      except Exception:
+        pass
   return redirect(url_for('wol_form'))
 
 @app.route('/add_wol_cron', methods=['POST'])
@@ -667,21 +713,62 @@ def delete_sol_cron():
 def check_status():
   ip_address = request.args.get('ip_address')
   test_type = request.args.get('test_type')
-  if is_computer_awake(ip_address,test_type):
+  mac_address = request.args.get('mac_address')
+  with status_cache_lock:
+    if mac_address and mac_address in status_cache and (time.time() - status_cache_time < CACHE_TTL):
+      return status_cache[mac_address]
+  if is_computer_awake(ip_address, test_type):
     return 'awake'
   else:
     return 'asleep'
 
+@app.route('/check_all_statuses')
+@login_required
+def check_all_statuses():
+  global status_cache, status_cache_time
+  now = time.time()
+  with status_cache_lock:
+    if now - status_cache_time < CACHE_TTL and status_cache:
+      return jsonify(status_cache)
+
+  computers = load_computers()
+  results = {}
+
+  def check_one(comp):
+    mac = comp['mac_address']
+    ip = comp['ip_address']
+    test_type = comp['test_type']
+    awake = is_computer_awake(ip, test_type)
+    return mac, 'awake' if awake else 'asleep'
+
+  with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, max(1, len(computers)))) as executor:
+    future_to_mac = {executor.submit(check_one, comp): comp['mac_address'] for comp in computers}
+    for future in concurrent.futures.as_completed(future_to_mac):
+      try:
+        mac, status = future.result()
+        results[mac] = status
+      except Exception:
+        mac = future_to_mac[future]
+        results[mac] = 'asleep'
+
+  with status_cache_lock:
+    status_cache = results
+    status_cache_time = now
+  return jsonify(results)
+
 @app.route('/wol_or_sol_send', methods=['POST'])
 @login_required
 def wol_or_sol_send():
-  mac_address = request.form['mac_address']
+  mac_address = request.form.get('mac_address', '').strip()
   computers = load_computers()
 
-  computer = next(c for c in computers if c['mac_address'] == mac_address)
+  computer = next((c for c in computers if c['mac_address'] == mac_address), None)
+  if not computer:
+    return generate_modal_html([f"Computer with MAC address '{mac_address}' not found."], 'Packet Send Error')
+
   ip_address = computer['ip_address']
   test_type = computer['test_type']
-  interface = computer['interface']
+  interface = computer.get('interface', 'eth0')
 
   messages = []
   if is_computer_awake(ip_address, test_type):

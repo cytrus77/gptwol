@@ -26,16 +26,18 @@ GPTWOL is a simple and lightweight Wake/Sleep on Lan gui made with python to wak
 ## Features 
 
 - Docker Image to deploy
-- Send Wake On Lan packets to wake up computers
+- Send Wake On Lan packets to wake up computers (with per-computer network adapter selection)
 - Send Sleep On Lan packets to shutdown computers
-- Add or Delete Computer
+- Add, Edit, or Delete Computer
+- Group computers and filter/sort by Group
+- Bulk Add entries from text format (`Name;MAC;IP;StatusCheck;Interface;Group`)
 - Computers status check with ping, arp or tcp request (timeout settings available)
 - ARP-SCAN to add computers
 - Very low power usage (20 mb RAM)
 - Check if IP and MAC provided are valid
 - cron job to wake up device
 - Check if Cron provided is valid
-- Search on computer Name, MAC or IP
+- Search on computer Name, Group, MAC or IP
 - Dark mode
 - Authentication (disable by default)
 
@@ -60,10 +62,45 @@ GPTWOL is a simple and lightweight Wake/Sleep on Lan gui made with python to wak
 >- Make sure that BIOS settings and remote OS is configure to allow Wake On Lan
 >- Don't expose gptwol directly on internet without proper authentication
 
-### With docker compose
+### 1. Build and Run from Source Code (Local Docker Build)
+
+Clone the repository and build the Docker image locally:
+
+```bash
+git clone https://github.com/Misterbabou/gptwol.git
+cd gptwol
+```
+
+#### Build and run using Docker Compose (Recommended)
+```bash
+docker compose up -d --build
+```
+
+#### Build and run using Docker CLI
+```bash
+# Build the Docker image
+docker build -t gptwol:latest .
+
+# Run the container
+docker run -d \
+  --name=gptwol \
+  --network="host" \
+  --restart unless-stopped \
+  -e PORT=5000 \
+  -e TZ=Europe/Paris \
+  -v ./appdata/db:/app/db \
+  -v ./appdata/cron:/etc/cron.d \
+  gptwol:latest
+```
+
+---
+
+### 2. Run Pre-built Image from Docker Hub
+
+#### With docker compose
 
 Create `docker-compose.yml` file:
-```
+```yaml
 services:
   gptwol:
     container_name: gptwol
@@ -98,15 +135,15 @@ services:
       - ./appdata/cron:/etc/cron.d
 ```
 
-Run the application
-```
+Run the application:
+```bash
 docker compose up -d
 ```
 
-### With docker
+#### With docker CLI
 
-Run the application
-```
+Run the application using Docker Hub image:
+```bash
 docker run -d \
   --name=gptwol \
   --network="host" \
@@ -201,6 +238,8 @@ docker run -d \
 :heavy_check_mark: Migrate computers to a SQLite database (added in 7.0.0)
 
 :heavy_check_mark: OIDC sign in (added in 7.1.0)
+
+:heavy_check_mark: Select ethernet adapter per computer, group filtering, and bulk text import (added in 8.0.0)
 
 ## Questions
 

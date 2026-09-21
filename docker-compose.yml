@@ -1,0 +1,34 @@
+services:
+  gptwol:
+    container_name: gptwol
+    build: .
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Paris #Set your timezone for Cron; default is UTC
+      #- PORT=5000 #Free Port on Your host; default is 5000
+      #- IP=0.0.0.0 #App listening IPV4 or IPV6 (ex [::]) address; default is 0.0.0.0
+      #- LOG_LEVEL=INFO #Can be DEBUG, INFO, WARN or ERROR
+      #- ENABLE_LOGIN=false # Enable or disable local login; default is false
+      #- USERNAME=admin # Set a username; default is admin
+      #- PASSWORD=admin # Set a password; default is admin
+      #- OIDC_ENABLED=false # Enable OIDC LOGIN; default is false
+      #- OIDC_ISSUER=https://auth.exemple.com # Base URL of the OIDC server; default is not set
+      #- OIDC_CLIENT_ID=oidcclientid # Your OIDC client ID; default is not set
+      #- OIDC_CLIENT_SECRET=oidcclientsecret # Your OIDC Client Secret; default is not set
+      #- OIDC_REDIRECT_URI=http(s)://urlofyourgptwol(:port) # Base URL of your GPTWOL instance; default is not set
+      #- SCRIPT_NAME=/my-app # Uncomment this line to run the app under a prefix; default is not set
+      #- ENABLE_ADD_DEL=true # Enable or disable ADD/Delete buttons; default is true
+      #- ENABLE_REFRESH=true # Enable or disable automatic status refresh; default is true
+      #- REFRESH_INTERVAL=30 # Time between each status check (in s); default is 30
+      #- PING_TIMEOUT=300 # Time to wait for a ping answer (in ms); default is 300
+      #- ARP_INTERFACE=eth0 # Set an arp interface manually; default is not set
+      #- ARP_TIMEOUT=300 # Time to wait for an arp answer (in ms); default is 300
+      #- TCP_TIMEOUT=1 # Time to wait for a tcp check (in s); default is 1
+      #- DEFAULT_LANG=en # Set default language ('en' or 'pl'); default is en
+      #- ENABLE_L2_WOL_PACKET=false # Enable L2 WOL packet instead of L4; default is false
+      #- L2_INTERFACE=eth0 # Interface for L2 WOL; default is eth0
+      #- UPTIME_CHECK_INTERVAL=60 # Interval for uptime status checks (in s); default is 60
+    volumes:
+      - ./appdata/db:/app/db
+      - ./appdata/cron:/etc/cron.d

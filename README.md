@@ -26,12 +26,14 @@ GPTWOL is a simple and lightweight Wake/Sleep on Lan gui made with python to wak
 ## Features 
 
 - Docker Image to deploy
+- Run natively with PM2 process manager
 - Send Wake On Lan packets to wake up computers (with per-computer network adapter selection)
 - Send Sleep On Lan packets to shutdown computers
 - Add, Edit, or Delete Computer
 - Group computers and filter/sort by Group
 - Bulk Add entries from text format (`Name;MAC;IP;StatusCheck;Interface;Group`)
 - Computers status check with ping, arp or tcp request (timeout settings available)
+- **Uptime monitoring** — per-device timeline graph showing RUNNING/OFF history with adjustable time range
 - ARP-SCAN to add computers
 - Very low power usage (20 mb RAM)
 - Check if IP and MAC provided are valid
@@ -131,6 +133,7 @@ services:
       #- DEFAULT_LANG=en # Set default language ('en' or 'pl'); default is en
       #- ENABLE_L2_WOL_PACKET=false # Enable L2 WOL packet instead of L4, default is false
       #- L2_INTERFACE=eth0 # Set the default interface for L2 WOL (set this only if you set ENABLE_L2_WOL_PACKET to true), default is eth0
+      #- UPTIME_CHECK_INTERVAL=60 # Interval in seconds between uptime status checks for the uptime graph; default is 60
     volumes:
       - ./appdata/db:/app/db
       - ./appdata/cron:/etc/cron.d
@@ -155,6 +158,118 @@ docker run -d \
   -v ./appdata/cron:/etc/cron.d \
   misterbabou/gptwol:latest
 ```
+
+---
+
+### 3. Run with PM2 (without Docker)
+
+You can run GPTWOL natively on your system using [PM2](https://pm2.io/), a production-grade Node.js process manager that also works with Python applications.
+
+#### Prerequisites
+
+- **Python 3.9+**
+- **pip** (Python package manager)
+- **Node.js 16+** and **npm** (for PM2)
+- **fping** (for ICMP status checks)
+- **arp-scan** (optional, for ARP checks and network scanning)
+
+#### Install system dependencies
+
+```bash
+# Debian/Ubuntu
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv fping arp-scan nodejs npm
+
+# RHEL/Fedora
+sudo dnf install -y python3 python3-pip fping arp-scan nodejs npm
+```
+
+#### Install PM2
+
+```bash
+sudo npm install -g pm2
+```
+
+#### Clone and set up the application
+
+```bash
+git clone https://github.com/Misterbabou/gptwol.git
+cd gptwol/app
+
+# Create a virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate
+
+# Install Python dependencies
+pip install -r requirements.txt
+```
+
+#### Create PM2 ecosystem file
+
+Create `ecosystem.config.js` in the project root (`gptwol/`):
+
+```javascript
+module.exports = {
+  apps: [{
+    name: 'gptwol',
+    script: 'venv/bin/python',
+    args: 'wol.py',
+    cwd: './app',
+    interpreter: 'none',
+    env: {
+      PORT: 5000,
+      IP: '0.0.0.0',
+      TZ: 'Europe/Paris',
+      DB_PATH: './db/computers.db',
+      CRON_FILENAME: './cron/gptwol',
+      // ENABLE_LOGIN: 'false',
+      // USERNAME: 'admin',
+      // PASSWORD: 'admin',
+      // ENABLE_ADD_DEL: 'true',
+      // ENABLE_REFRESH: 'true',
+      // REFRESH_INTERVAL: '30',
+      // PING_TIMEOUT: '300',
+      // ARP_TIMEOUT: '300',
+      // TCP_TIMEOUT: '1',
+      // DEFAULT_LANG: 'en',
+      // UPTIME_CHECK_INTERVAL: '60',
+      // LOG_LEVEL: 'INFO',
+    }
+  }]
+};
+```
+
+#### Start the application
+
+```bash
+# Start with PM2
+pm2 start ecosystem.config.js
+
+# Save the process list so PM2 restarts it on reboot
+pm2 save
+
+# Set PM2 to start on system boot
+pm2 startup
+```
+
+#### Common PM2 commands
+
+```bash
+pm2 status              # Check app status
+pm2 logs gptwol         # View application logs
+pm2 restart gptwol      # Restart the application
+pm2 stop gptwol         # Stop the application
+pm2 delete gptwol       # Remove from PM2 process list
+pm2 monit               # Real-time monitoring dashboard
+```
+
+> [!NOTE]
+>
+> When running without Docker, make sure the user running PM2 has the necessary permissions for sending WOL packets (raw sockets) and running `arp-scan`. You may need to run PM2 as root or configure appropriate capabilities:
+> ```bash
+> sudo setcap cap_net_raw+ep $(which fping)
+> sudo setcap cap_net_raw+ep $(which arp-scan)
+> ```
 
 ## Configure Sleep on Lan
 
@@ -241,6 +356,8 @@ docker run -d \
 :heavy_check_mark: OIDC sign in (added in 7.1.0)
 
 :heavy_check_mark: Select ethernet adapter per computer, group filtering, bulk text import, and Polish language support (added in 8.1.0)
+
+:heavy_check_mark: Per-device uptime monitoring with timeline graph and PM2 native deployment support (added in 9.0.0)
 
 ## Questions
 

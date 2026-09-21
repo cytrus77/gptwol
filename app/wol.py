@@ -13,6 +13,7 @@ import concurrent.futures
 import time
 import fcntl
 import threading
+from datetime import datetime, timezone
 
 status_cache = {}
 status_cache_time = 0
@@ -35,6 +36,9 @@ l2_wol_packet = os.environ.get('ENABLE_L2_WOL_PACKET', 'false').lower() == 'true
 l2_interface = os.environ.get('L2_INTERFACE', 'eth0')
 cron_filename = os.environ.get('CRON_FILENAME', '/etc/cron.d/gptwol')
 computer_filename = 'db/computers.txt'
+
+uptime_check_interval = int(os.environ.get('UPTIME_CHECK_INTERVAL', 60))
+uptime_last_known_state = {}  # mac_address -> 'online'/'offline'
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -315,6 +319,12 @@ class Computer(db.Model):
   test_type = db.Column(db.String(10), nullable=False)
   interface = db.Column(db.String(64), nullable=False)
   group_name = db.Column(db.String(64), nullable=True, default='')
+
+class UptimeEvent(db.Model):
+  id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+  mac_address = db.Column(db.String(17), db.ForeignKey('computer.mac_address', ondelete='CASCADE'), nullable=False, index=True)
+  timestamp = db.Column(db.Float, nullable=False, index=True)  # Unix timestamp
+  state = db.Column(db.String(10), nullable=False)  # 'online' or 'offline'
 
 def migrate_db_schema():
   with db.engine.connect() as conn:
@@ -602,6 +612,8 @@ def delete_computer():
   delete_cron_entry(reversed_mac_address)
 
   Computer.query.filter_by(mac_address=mac_address).delete()
+  UptimeEvent.query.filter_by(mac_address=mac_address).delete()
+  uptime_last_known_state.pop(mac_address, None)
   db.session.commit()
 
   return redirect(url_for('wol_form'))
@@ -930,10 +942,115 @@ def arp_scan():
   except Exception as e:
     return jsonify({'message': str(e)}), 500
 
+@app.route('/uptime_history')
+@login_required
+def uptime_history():
+  mac_address = request.args.get('mac_address')
+  hours = request.args.get('hours', 24, type=float)
+
+  if not mac_address:
+    return jsonify({'error': 'mac_address required'}), 400
+
+  now = time.time()
+  since = now - (hours * 3600)
+
+  events = UptimeEvent.query.filter(
+    UptimeEvent.mac_address == mac_address,
+    UptimeEvent.timestamp >= since
+  ).order_by(UptimeEvent.timestamp.asc()).all()
+
+  # Get the most recent event before the window to establish initial state
+  prior_event = UptimeEvent.query.filter(
+    UptimeEvent.mac_address == mac_address,
+    UptimeEvent.timestamp < since
+  ).order_by(UptimeEvent.timestamp.desc()).first()
+
+  initial_state = prior_event.state if prior_event else 'unknown'
+
+  event_list = [{'timestamp': e.timestamp, 'state': e.state} for e in events]
+
+  return jsonify({
+    'mac_address': mac_address,
+    'since': since,
+    'now': now,
+    'initial_state': initial_state,
+    'events': event_list
+  })
+
+def uptime_monitor_loop():
+  """Background thread: periodically check all devices and record state transitions."""
+  global uptime_last_known_state
+  logger.info(f"Uptime monitor started (interval={uptime_check_interval}s)")
+  while True:
+    try:
+      time.sleep(uptime_check_interval)
+      with app.app_context():
+        computers = Computer.query.all()
+        if not computers:
+          continue
+
+        def check_one(comp):
+          awake = is_computer_awake(comp.ip_address, comp.test_type)
+          return comp.mac_address, 'online' if awake else 'offline'
+
+        results = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, max(1, len(computers)))) as executor:
+          futures = {executor.submit(check_one, c): c.mac_address for c in computers}
+          for future in concurrent.futures.as_completed(futures):
+            try:
+              mac, state = future.result()
+              results[mac] = state
+            except Exception:
+              mac = futures[future]
+              results[mac] = 'offline'
+
+        now = time.time()
+        for mac, new_state in results.items():
+          old_state = uptime_last_known_state.get(mac)
+          if old_state is None:
+            # First check for this device — record initial state
+            uptime_last_known_state[mac] = new_state
+            event = UptimeEvent(mac_address=mac, timestamp=now, state=new_state)
+            db.session.add(event)
+          elif old_state != new_state:
+            # State changed — record transition
+            uptime_last_known_state[mac] = new_state
+            event = UptimeEvent(mac_address=mac, timestamp=now, state=new_state)
+            db.session.add(event)
+
+        # Clean up events for deleted computers
+        active_macs = {c.mac_address for c in computers}
+        stale_macs = set(uptime_last_known_state.keys()) - active_macs
+        for mac in stale_macs:
+          del uptime_last_known_state[mac]
+
+        db.session.commit()
+
+    except Exception as e:
+      logger.error(f"Uptime monitor error: {e}")
+      try:
+        with app.app_context():
+          db.session.rollback()
+      except Exception:
+        pass
+
 with app.app_context():
   db.create_all()
   migrate_db_schema()
   migrate_txt_to_db()
+
+  # Initialize uptime_last_known_state from the most recent event per device
+  computers = Computer.query.all()
+  for comp in computers:
+    last_event = UptimeEvent.query.filter_by(
+      mac_address=comp.mac_address
+    ).order_by(UptimeEvent.timestamp.desc()).first()
+    if last_event:
+      uptime_last_known_state[comp.mac_address] = last_event.state
+
+# Start the uptime monitoring background thread
+_uptime_thread = threading.Thread(target=uptime_monitor_loop, daemon=True)
+_uptime_thread.start()
 
 if __name__ == '__main__':
   port = int(os.environ.get('PORT', 5000))

@@ -23,6 +23,7 @@
       const add_sol_cron_url = "{{ url_for('add_sol_cron') }}";
       const delete_wol_cron_url = "{{ url_for('delete_wol_cron') }}";
       const delete_sol_cron_url = "{{ url_for('delete_sol_cron') }}";
+      const uptime_history_url = "{{ url_for('uptime_history') }}";
 
       {% if os.environ.get('ENABLE_REFRESH') != 'false' -%}
         setInterval(() => {
@@ -197,8 +198,11 @@
                 </div>
               </div>
             </div>
-            {% if os.environ.get('ENABLE_ADD_DEL') != 'false' -%}
             <div class="card-footer text-end py-0">
+              <button type="button" class="btn btn-info btn-circle btn-lg" title="Uptime History" data-bs-toggle="modal" data-bs-target="#uptimeModal" onclick="loadUptimeGraph('{{ computer.mac_address }}', '{{ computer.name }}')">
+                <i class="fa-solid fa-chart-line"></i>
+              </button>
+              {% if os.environ.get('ENABLE_ADD_DEL') != 'false' -%}
               <button type="button" class="btn btn-primary btn-circle btn-lg" title="Configure Cron" data-bs-toggle="modal" data-bs-target="#cronSettingsModal" onclick="loadCronSettings('{{ computer.name }}', '{{ computer.cron_wol_schedule }}', '{{ computer.cron_sol_schedule }}', '{{ computer.mac_address }}')">
                 <i class="fa-regular fa-clock"></i>
               </button>
@@ -208,8 +212,8 @@
               <button type="button" class="btn btn-danger btn-circle btn-lg" title="Delete computer" data-bs-toggle="modal" data-bs-target="#staticDelete" onclick="setDeleteForm('{{ url_for('delete_computer') }}', 'mac_address', '{{ computer.mac_address }}', 'Computer {{ computer.name }}')">
                 <i class="fa-regular fa-trash-can"></i>
               </button>
+              {% endif -%}
             </div>
-            {% endif -%}
           </div>
         </div>
         {% endfor %}
@@ -390,6 +394,49 @@
       </div>
     </div>
 
+    <div class="modal fade" id="uptimeModal" tabindex="-1" aria-labelledby="uptimeModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="uptimeModalLabel">Uptime History</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span id="uptimeDeviceName" class="fw-bold"></span>
+              <select id="uptimeTimeRange" class="form-select form-select-sm" style="width:auto;" onchange="refreshUptimeGraph()">
+                <option value="1">Last 1 hour</option>
+                <option value="6">Last 6 hours</option>
+                <option value="12">Last 12 hours</option>
+                <option value="24" selected>Last 24 hours</option>
+                <option value="48">Last 2 days</option>
+                <option value="168">Last 7 days</option>
+                <option value="720">Last 30 days</option>
+                <option value="2160">Last 90 days</option>
+                <option value="8760">Last year</option>
+              </select>
+            </div>
+            <div id="uptimeGraphContainer" style="position:relative; width:100%; height:120px;">
+              <canvas id="uptimeCanvas" style="width:100%; height:100%;"></canvas>
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+              <small id="uptimeStartLabel" class="text-muted"></small>
+              <small id="uptimeEndLabel" class="text-muted"></small>
+            </div>
+            <div class="d-flex gap-3 mt-2 justify-content-center">
+              <span><span style="display:inline-block;width:14px;height:14px;background:#4CAF50;border-radius:3px;vertical-align:middle;"></span> RUNNING</span>
+              <span><span style="display:inline-block;width:14px;height:14px;background:#ff0000;border-radius:3px;vertical-align:middle;"></span> OFF</span>
+              <span><span style="display:inline-block;width:14px;height:14px;background:#6c757d;border-radius:3px;vertical-align:middle;"></span> Unknown</span>
+            </div>
+            <div id="uptimeStats" class="text-center mt-2 small text-muted"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     {% if os.environ.get('ENABLE_ADD_DEL') != 'false' -%}
     <script src="{{ url_for('static', filename='js/editcomputer.js') }}"></script>
     <script src="{{ url_for('static', filename='js/editcron.js') }}"></script>
@@ -399,5 +446,6 @@
     <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
     <script src="{{ url_for('static', filename='js/arpscan.js') }}"></script>
     <script src="{{ url_for('static', filename='js/searchbar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/uptime.js') }}"></script>
   </body>
 </html>
